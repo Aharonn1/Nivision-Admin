@@ -31,6 +31,7 @@ const httpRequestCounter = new prom_client_1.default.Counter({
     labelNames: ['method', 'route', 'status'],
 });
 register.registerMetric(httpRequestCounter);
+server.set('trust proxy', 1); // זה מאפשר לשרת "לראות" את ה-IP האמיתי של המשתמש דרך ה-Proxy
 // Middleware לתיעוד בקשות
 server.use((req, res, next) => {
     res.on('finish', () => {
@@ -61,7 +62,8 @@ server.get("/metrics", async (req, res) => {
 // מערך זמני בזיכרון (בשלב הבא נעביר את זה ל-Redis)
 const blockedIpsList = [];
 server.get("/api/security/threats", (req, res) => {
-    res.json({ blockedIps: blockedIpsList });
+    console.log("Current threatLogs:", security_1.threatLogs);
+    res.json({ blockedIps: security_1.threatLogs });
 });
 server.get("/api/system/health", (req, res) => {
     res.json((0, security_1.getSystemHealth)());

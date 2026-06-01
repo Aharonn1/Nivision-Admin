@@ -3,110 +3,78 @@ import cors from "cors";
 import expressFileUpload from "express-fileupload";
 import dotenv from "dotenv";
 import client from "prom-client";
-
-// --- ייבוא כלי עזר ו-Middleware (ללא סיומת .js) ---
-import AppConfig from "./2-utils/appConfig";
+import systemRoutes from "./6-routes/systemRoutes";
 import routeNotFound from "./3-middleware/route-not-found";
 import catchAll from "./3-middleware/catch-all";
 import { ensureAllAssetsCopied } from "./2-utils/file-utils";
-
-// --- ייבוא נתיבים (Routes) ---
-// import authRoutes from "./6-routes/auth-routes";
-// import taskRoutes from "./6-routes/task-routes";
-// import aiRoutes from "./6-routes/ai-routes";
-// import adminRoutes from "./6-routes/admin-routes";
-// import braingineController from "./6-routes/braingine-controller";
 import { getSystemHealth, limiter, securityAuditor, threatLogs } from "./3-middleware/security";
 
-// החלת ההגנה על כל הנתיבים של ה-API
-
-// 1. טעינת משתני סביבה
 dotenv.config();
-
 const server = express();
 
-// --- 📊 הגדרת Metrics (Prometheus) ---
+// --- 📊 Metrics ---
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
-
-
-
-
 const httpRequestCounter = new client.Counter({
     name: 'http_requests_total',
     help: 'Total number of HTTP requests',
     labelNames: ['method', 'route', 'status'],
 });
 register.registerMetric(httpRequestCounter);
-server.set('trust proxy', 1); // זה מאפשר לשרת "לראות" את ה-IP האמיתי של המשתמש דרך ה-Proxy
-// Middleware לתיעוד בקשות
+
+// --- Middleware גלובלי ---
+server.set('trust proxy', 1);
+server.use(cors({ origin: ["http://localhost:3000", "https://www.shoes-shop-pro.com", "https://shoes-shop-pro.com"], credentials: true }));
+server.use(express.json());
+server.use(expressFileUpload());
+
+// תיעוד בקשות ומדידה
 server.use((req: Request, res: Response, next: NextFunction) => {
     res.on('finish', () => {
-        if (req.route) {
-            httpRequestCounter.labels(req.method, req.route.path, res.statusCode.toString()).inc();
-        }
+        if (req.route) httpRequestCounter.labels(req.method, req.route.path, res.statusCode.toString()).inc();
     });
     next();
 });
 
-// --- הגדרת Middleware גלובלי ---
-const corsOptions = {
-    origin: ["http://localhost:3000", "https://www.shoes-shop-pro.com", "https://shoes-shop-pro.com"],
-    credentials: true,
-};
+// --- נתיבים ציבוריים (ללא אבטחה כבדה למניעת 404) ---
+// העברתי את ה-systemRoutes למעלה כדי שלא יחסמו ע"י ה-limiter/auditor
+server.use("/api", systemRoutes); 
 
+// --- אבטחה ומגבלות (חלים רק אחרי הראוטרים הציבוריים) ---
 server.use("/api/", limiter);
 server.use(securityAuditor);
-server.use(cors(corsOptions));
-server.use(express.json());
-server.use(expressFileUpload());
 
-// --- נתיבים ---
-server.get("/api/health", (req: Request, res: Response) => {
-    res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
-});
-
-server.get("/metrics", async (req: Request, res: Response) => {
+// --- נתיבי API נוספים ---
+server.get("/api/health", (req, res) => res.status(200).json({ status: "UP", timestamp: new Date().toISOString() }));
+server.get("/metrics", async (req, res) => {
     res.set("Content-Type", register.contentType);
     res.end(await register.metrics());
 });
 
-// מערך זמני בזיכרון (בשלב הבא נעביר את זה ל-Redis)
-const blockedIpsList: string[] = [];
-
-server.get("/api/security/threats", (req, res) => {
-     console.log("Current threatLogs:", threatLogs);
-    res.json({ blockedIps: threatLogs }); 
-});
-
-server.get("/api/system/health", (req, res) => {
-    res.json(getSystemHealth());
-});
+server.get("/api/security/threats", (req, res) => res.json({ blockedIps: threatLogs }));
+server.get("/api/system/health", (req, res) => res.json(getSystemHealth()));
 
 // סטטיים
 server.use("/api/images", express.static("/home/ubuntu/backend/dist/1-assets/images/images"));
 
-// נתיבי API
-// server.use("/api", authRoutes);
-// server.use("/api", taskRoutes);
-// server.use("/api", aiRoutes);
-// server.use("/api", braingineController);
-// server.use("/api/admin", adminRoutes);
-
 // טיפול בשגיאות
 server.use(routeNotFound);
 server.use(catchAll);
-
-// --- 5. הפעלת השרת ---
+server._router.stack.forEach((r: any) => {
+    if (r.route && r.route.path) {
+        console.log(`[DEBUG] Route registered: ${r.route.path}`);
+    } else if (r.name === 'router') {
+        r.handle.stack.forEach((subR: any) => {
+            if (subR.route) console.log(`[DEBUG] Sub-route registered: ${subR.route.path}`);
+        });
+    }
+});
+// --- הפעלה ---
 (async () => {
     try {
         await ensureAllAssetsCopied();
-        // המרה מפורשת למספר בעזרת Number()
         const port = Number(process.env.PORT) || 3001;
-        
-        server.listen(port, '0.0.0.0', () => {
-            console.log(`🚀 Nivision Intelligence Backend is running on port ${port}`);
-        });
+        server.listen(port, '0.0.0.0', () => console.log(`🚀 Nivision Intelligence Backend is running on port ${port}`));
     } catch (err) {
         console.error("❌ Critical Failure:", err);
         process.exit(1);

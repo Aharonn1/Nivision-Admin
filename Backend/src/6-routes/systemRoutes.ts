@@ -15,4 +15,14 @@ router.get("/metrics/cpu", async (req: Request, res: Response, next: NextFunctio
     }
 });
 
+// ב-systemRoutes.ts
+router.get("/system/intelligence", async (req, res, next) => {
+    try {
+        const intel = await awsService.getSystemIntelligence();
+        res.json(intel);
+    } catch (err) {
+        next(err);
+    }
+});
+
 export default router;

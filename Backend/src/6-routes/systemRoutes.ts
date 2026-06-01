@@ -18,10 +18,13 @@ router.get("/metrics/cpu", async (req: Request, res: Response, next: NextFunctio
 // ב-systemRoutes.ts
 router.get("/system/intelligence", async (req, res, next) => {
     try {
+        console.log("Fetching system intelligence...");
         const intel = await awsService.getSystemIntelligence();
+        console.log("Intelligence fetched successfully:", intel);
         res.json(intel);
     } catch (err) {
-        next(err);
+        console.error("CRITICAL ERROR in /system/intelligence:", err); // כאן נראה בדיוק מה השגיאה
+        next(err); 
     }
 });
 

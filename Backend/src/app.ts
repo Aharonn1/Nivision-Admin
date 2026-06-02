@@ -24,7 +24,11 @@ register.registerMetric(httpRequestCounter);
 
 // --- Middleware גלובלי ---
 server.set('trust proxy', 1);
-server.use(cors({ origin: ["http://localhost:3000", "https://www.shoes-shop-pro.com", "https://shoes-shop-pro.com"], credentials: true }));
+server.use(cors({
+    origin: 'http://localhost:3000', // או 'http://localhost:3000'
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 server.use(express.json());
 server.use(expressFileUpload());
 

@@ -77,24 +77,29 @@ class AwsService {
     }
 
     public async getSystemIntelligence(): Promise<any> {
-        const instanceId = "i-03a459ea9a19bd36a";
-        
-        // שליפה מקבילית
-        const [cpu, status, network, costs] = await Promise.all([
-            this.getCpuUsage(instanceId),
-            this.getInstanceStatus(instanceId),
-            this.getNetworkUsage(instanceId),
-            this.getBillingDetails()
-        ]);
-
-        return {
-            cpu: cpu.toFixed(2),
-            status: status, // הסטטוס האמיתי מהשרת (running/stopped)
-            network: (network / 1024 / 1024).toFixed(2), // המרה ל-MB
-            totalCost: costs.total,
-            breakdown: costs.services
-        };
+    const instanceId = "i-03a459ea9a19bd36a";
+    
+    // נריץ כל פונקציה בנפרד כדי שאם אחת תיכשל, האחרות ימשיכו לעבוד
+    const cpu = await this.getCpuUsage(instanceId);
+    const network = await this.getNetworkUsage(instanceId);
+    const status = await this.getInstanceStatus(instanceId);
+    
+    // ננסה להביא תשלומים, אבל אם זה נכשל - נחזיר ערך ריק ולא ניתן לזה להפיל את הכל
+    let costs = { total: "$0.00", services: [] };
+    try {
+        costs = await this.getBillingDetails();
+    } catch (e) {
+        console.log("Billing skipped due to permissions");
     }
+
+    return {
+        cpu: cpu.toFixed(2),
+        status: status,
+        network: (network / 1024 / 1024).toFixed(2),
+        totalCost: costs.total,
+        breakdown: costs.services
+    };
+}
 }
 
 export const awsService = new AwsService();

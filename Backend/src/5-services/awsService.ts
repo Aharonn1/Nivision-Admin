@@ -55,22 +55,18 @@ class AwsService {
             return { total: "$0.00", services: [] };
         }
     }
-
-    public async getSystemIntelligence(): Promise<any> {
-        try {
-            const cpu = await this.getCpuUsage("i-03a459ea9a19bd36a");
-            const costs = await this.getBillingDetails();
-            return {
-                cpu: cpu.toFixed(2),
-                totalCost: costs.total,
-                breakdown: costs.services,
-                status: "Healthy"
-            };
-        } catch (error) {
-            console.error("System Intelligence Error:", error);
-            throw new Error("Failed to aggregate system intelligence");
-        }
-    }
+public async getSystemIntelligence(): Promise<any> {
+    // נתונים מזויפים לצורך בדיקה בלבד
+    return {
+        cpu: "1.20",
+        totalCost: "$15.42",
+        breakdown: [
+            { Keys: ["EC2"], Metrics: { UnblendedCost: { Amount: "10.00" } } },
+            { Keys: ["RDS"], Metrics: { UnblendedCost: { Amount: "5.42" } } }
+        ],
+        status: "Healthy"
+    };
+}
 }
 
 export const awsService = new AwsService();

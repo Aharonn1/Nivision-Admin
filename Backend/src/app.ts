@@ -24,11 +24,15 @@ register.registerMetric(httpRequestCounter);
 
 // --- Middleware גלובלי ---
 server.set('trust proxy', 1);
+
+// התיקון הקריטי כאן:
 server.use(cors({
-    origin: 'http://localhost:3000', // או 'http://localhost:3000'
-    methods: ['GET', 'POST'],
+    origin: '*', // לניפוי באגים: תן גישה מכל מקור. אחרי שזה יעבוד, תשנה ל-http://localhost:3000
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
+
 server.use(express.json());
 server.use(expressFileUpload());
 
@@ -40,11 +44,10 @@ server.use((req: Request, res: Response, next: NextFunction) => {
     next();
 });
 
-// --- נתיבים ציבוריים (ללא אבטחה כבדה למניעת 404) ---
-// העברתי את ה-systemRoutes למעלה כדי שלא יחסמו ע"י ה-limiter/auditor
+// --- נתיבים ציבוריים ---
 server.use("/api", systemRoutes); 
 
-// --- אבטחה ומגבלות (חלים רק אחרי הראוטרים הציבוריים) ---
+// --- אבטחה ומגבלות ---
 server.use("/api/", limiter);
 server.use(securityAuditor);
 
@@ -64,15 +67,7 @@ server.use("/api/images", express.static("/home/ubuntu/backend/dist/1-assets/ima
 // טיפול בשגיאות
 server.use(routeNotFound);
 server.use(catchAll);
-server._router.stack.forEach((r: any) => {
-    if (r.route && r.route.path) {
-        console.log(`[DEBUG] Route registered: ${r.route.path}`);
-    } else if (r.name === 'router') {
-        r.handle.stack.forEach((subR: any) => {
-            if (subR.route) console.log(`[DEBUG] Sub-route registered: ${subR.route.path}`);
-        });
-    }
-});
+
 // --- הפעלה ---
 (async () => {
     try {

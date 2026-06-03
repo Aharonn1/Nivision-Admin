@@ -79,25 +79,19 @@ class AwsService {
     public async getSystemIntelligence(): Promise<any> {
     const instanceId = "i-03a459ea9a19bd36a";
     
-    // נריץ כל פונקציה בנפרד כדי שאם אחת תיכשל, האחרות ימשיכו לעבוד
-    const cpu = await this.getCpuUsage(instanceId);
-    const network = await this.getNetworkUsage(instanceId);
-    const status = await this.getInstanceStatus(instanceId);
-    
-    // ננסה להביא תשלומים, אבל אם זה נכשל - נחזיר ערך ריק ולא ניתן לזה להפיל את הכל
-    let costs = { total: "$0.00", services: [] };
-    try {
-        costs = await this.getBillingDetails();
-    } catch (e) {
-        console.log("Billing skipped due to permissions");
-    }
+    // מביאים רק מה שעובד בוודאות
+    const [cpu, network, status] = await Promise.all([
+        this.getCpuUsage(instanceId),
+        this.getNetworkUsage(instanceId),
+        this.getInstanceStatus(instanceId)
+    ]);
 
     return {
         cpu: cpu.toFixed(2),
         status: status,
         network: (network / 1024 / 1024).toFixed(2),
-        totalCost: costs.total,
-        breakdown: costs.services
+        totalCost: "$0.00", // ערך קבוע כי אין לנו הרשאה
+        breakdown: []
     };
 }
 }

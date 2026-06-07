@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#f8fafc] text-slate-900;
+    margin: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  /* תיקון מבנה הקונטיינר */
+  .max-w-7xl {
+    max-width: 1400px !important;
+    width: 98% !important;
+    margin: 0 auto;
+  }
+
+  /* תיקון הטבלה - חובה להוסיף visible כדי שהניתוח יצוף */
+  .overflow-x-auto, 
+  .relative.w-full {
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: separate !important; /* קריטי ליכולת של הניתוח לצוף מעל שורות */
+    border-spacing: 0;
+  }
+
+  /* עיצוב כותרות */
+  th {
+    background-color: #f8fafc !important;
+    color: #64748b !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.1em;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  /* עיצוב תאים - שינוי קריטי לניתוח AI */
+  td {
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    position: relative !important;
+    overflow: visible !important; /* שיניתי מ-hidden ל-visible */
+    white-space: nowrap;
+    z-index: auto;
+  }
+
+  /* עיצוב קוביות ה-KPI */
+  .bg-slate-900.rounded-\[2\.5rem\] {
+    padding: 2rem !important;
+    max-width: 100% !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 2rem;
+  }
+  
+  .text-7xl, .text-6xl { 
+    font-size: 3.5rem !important;
+    line-height: 1 !important;
+    letter-spacing: -0.05em !important;
+  }
+
+  /* אפקט ריחוף (Hover) */
+  tbody tr {
+    transition: background-color 0.2s ease;
+  }
+
+  tbody tr:hover {
+    background-color: #f1f5f9 !important;
+    z-index: 10; /* מעלה את השורה המרוחפת מעל האחרות */
+  }
+
+  /* תיקון גרפים */
+  .recharts-cartesian-axis-tick text {
+    fill: #64748b !important; 
+    font-weight: 700 !important;
+    font-size: 11px !important;
+  }
+}
+
+/* עיצוב הגולל עבור דפדפני Chrome, Edge ו-Safari */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px; /* רוחב הגולל */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02); /* הרקע של נתיב הגלילה */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #6366f1, #a78bfa); /* גרדיאנט שמתאים לעמודות */
+  border-radius: 10px;
+  border: 2px solid #1a1f37; /* יוצר רווח דק סביב הגולל למראה נקי */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #fbbf24; /* צבע זהב כשעומדים על הגולל */
+}
+
+/* עיצוב עבור Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #6366f1 rgba(255, 255, 255, 0.02);
+}

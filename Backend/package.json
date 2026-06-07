@@ -13,7 +13,7 @@
   "author": "Michael Sar",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-cloudwatch": "^3.1057.0",
+    "@aws-sdk/client-cloudwatch": "^3.1062.0",
     "@aws-sdk/client-cost-explorer": "^3.1057.0",
     "@aws-sdk/client-ec2": "^3.1058.0",
     "@google/generative-ai": "^0.24.1",

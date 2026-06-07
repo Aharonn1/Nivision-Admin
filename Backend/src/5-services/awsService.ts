@@ -1,78 +1,126 @@
 import { CloudWatchClient, GetMetricStatisticsCommand, Statistic } from "@aws-sdk/client-cloudwatch";
 import { EC2Client, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
+import dotenv from "dotenv";
 
-const cwClient = new CloudWatchClient({ region: "eu-north-1" });
-const ec2Client = new EC2Client({ region: "eu-north-1" });
+dotenv.config();
+
+const clientConfig = { 
+    region: process.env.AWS_REGION || "eu-north-1",
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ""
+    }
+};
+
+const cwClient = new CloudWatchClient(clientConfig);
+const ec2Client = new EC2Client(clientConfig);
 
 class AwsService {
+    private readonly host = "ip-172-31-25-222"; // ה-Host שראינו ב-list-metrics
+    private readonly instanceId = "i-03a459ea9a19bd36a";
 
-    public async getCpuUsage(instanceId: string): Promise<number> {
-        try {
-            const params = {
-                Namespace: "AWS/EC2",
-                MetricName: "CPUUtilization",
-                Dimensions: [{ Name: "InstanceId", Value: instanceId }],
-                StartTime: new Date(Date.now() - 600000),
-                EndTime: new Date(),
-                Period: 300,
-                Statistics: [Statistic.Average],
-            };
-            const command = new GetMetricStatisticsCommand(params);
-            const response = await cwClient.send(command);
-            return response.Datapoints?.[response.Datapoints.length - 1]?.Average || 0;
-        } catch (error) {
-            console.error("CPU Error (non-critical):", error);
-            return 0;
-        }
+    public async getCpuUsage(): Promise<number> {
+        // שימוש ב-cpu-total כדי לקבל ממוצע של כל הליבות
+        const idle = await this.getMetric("CWAgent", "cpu_usage_idle", "Average", [
+            { Name: "host", Value: this.host },
+            { Name: "cpu", Value: "cpu-total" }
+        ]);
+        return 100 - idle;
     }
 
-    public async getInstanceStatus(instanceId: string): Promise<string> {
+    public async getMemoryUsage(): Promise<number> {
+        return this.getMetric("CWAgent", "mem_used_percent", "Average", [
+            { Name: "host", Value: this.host }
+        ]);
+    }
+
+    public async getDiskUsage(): Promise<number> {
+        // שימוש ב-Dimensions המדויקים שנמצאו ב-list-metrics
+        return this.getMetric("CWAgent", "disk_used_percent", "Average", [
+            { Name: "host", Value: this.host },
+            { Name: "path", Value: "/" },
+            { Name: "device", Value: "nvme0n1p1" },
+            { Name: "fstype", Value: "ext4" }
+        ]);
+    }
+
+    public async getInstanceStatus(): Promise<string> {
         try {
-            const command = new DescribeInstancesCommand({ InstanceIds: [instanceId] });
-            const response = await ec2Client.send(command);
+            const response = await ec2Client.send(new DescribeInstancesCommand({ InstanceIds: [this.instanceId] }));
             return response.Reservations?.[0].Instances?.[0].State?.Name || "unknown";
-        } catch (error) {
-            console.error("Status Error (non-critical):", error);
+        } catch (e) {
             return "error";
         }
     }
 
-    public async getNetworkUsage(instanceId: string): Promise<number> {
+    public async getErrorCount(): Promise<number> {
+    // משיכת מטריקה מתוך CloudWatch Logs (באמצעות Insights)
+    // או ספירת לוגים ב-Namespace ייעודי
+    return this.getMetric("Nivision/Logs", "ErrorCount", "Sum", [
+        { Name: "ServiceName", Value: "nivision-backend" }
+    ]);
+    }
+
+    // הוסף את אלו למחלקה:
+
+    public async getNetworkUsage(): Promise<{ in: number, out: number }> {
+    const netIn = await this.getMetric("CWAgent", "net_bytes_recv", "Sum", [
+        { Name: "host", Value: this.host },
+        { Name: "interface", Value: "eth0" }
+    ]);
+    const netOut = await this.getMetric("CWAgent", "net_bytes_sent", "Sum", [
+        { Name: "host", Value: this.host },
+        { Name: "interface", Value: "eth0" }
+    ]);
+    return { in: netIn / 1024 / 1024, out: netOut / 1024 / 1024 }; // המרה ל-MB
+    }
+
+    public async getSwapUsage(): Promise<number> {
+    return this.getMetric("CWAgent", "swap_used_percent", "Average", [
+        { Name: "host", Value: this.host }
+    ]);
+    }
+
+    private async getMetric(namespace: string, metricName: string, stat: string, dimensions: any[]): Promise<number> {
         try {
-            const params = {
-                Namespace: "AWS/EC2",
-                MetricName: "NetworkIn",
-                Dimensions: [{ Name: "InstanceId", Value: instanceId }],
+            const response = await cwClient.send(new GetMetricStatisticsCommand({
+                Namespace: namespace,
+                MetricName: metricName,
+                Dimensions: dimensions,
                 StartTime: new Date(Date.now() - 600000),
                 EndTime: new Date(),
                 Period: 300,
-                Statistics: [Statistic.Average],
-            };
-            const command = new GetMetricStatisticsCommand(params);
-            const response = await cwClient.send(command);
-            return response.Datapoints?.[response.Datapoints.length - 1]?.Average || 0;
-        } catch (error) {
-            console.error("Network Error (non-critical):", error);
-            return 0;
-        }
+                Statistics: [stat as Statistic],
+            }));
+            return response.Datapoints?.[0]?.Average || 0;
+        } catch { return 0; }
     }
 
-    // פונקציה חסינה שלא מפילה את המערכת
+    // 1. עדכון ה-Promise.all בתוך getSystemIntelligence
     public async getSystemIntelligence(): Promise<any> {
-        const instanceId = "i-03a459ea9a19bd36a";
-        
-        // הרצה סדרתית מבודדת למניעת קריסות
-        const cpu = await this.getCpuUsage(instanceId);
-        const network = await this.getNetworkUsage(instanceId);
-        const status = await this.getInstanceStatus(instanceId);
+    const [cpu, mem, disk, status, errorCount, net, swap] = await Promise.all([
+        this.getCpuUsage(),
+        this.getMemoryUsage(),
+        this.getDiskUsage(),
+        this.getInstanceStatus(),
+        this.getErrorCount(),
+        this.getNetworkUsage(),
+        this.getSwapUsage()
+    ]);
 
-        return {
-            cpu: cpu.toFixed(2),
-            status: status,
-            network: (network / 1024 / 1024).toFixed(2),
-            totalCost: "$0.00",
-            breakdown: []
-        };
+    return {
+        timestamp: new Date().toISOString(),
+        status,
+        resources: {
+            cpu: `${cpu.toFixed(2)}%`,
+            memory: `${mem.toFixed(2)}%`,
+            disk: `${disk.toFixed(2)}%`,
+            errors: errorCount.toString(),
+            netIn: `${net.in.toFixed(1)} MB`,
+            netOut: `${net.out.toFixed(1)} MB`,
+            swap: `${swap.toFixed(2)}%`
+        }
+    };
     }
 }
 

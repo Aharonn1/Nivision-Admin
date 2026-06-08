@@ -36,14 +36,10 @@ router.get('/aws', async (req, res, next) => {
     }
 });
 
-// הוספת ה-Endpoint שמחזיר את נתוני העלויות
 router.get('/billing/trend', async (req, res) => {
-    try {
-        const costData = await awsService.getMonthlyCostTrend();
-        res.status(200).json(costData);
-    } catch (error) {
-        res.status(500).json({ message: "שגיאה במשיכת נתוני עלויות AWS" });
-    }
+    const { start, end } = req.query; // דוגמה: /api/billing/trend?start=2026-01-01&end=2026-06-01
+    const data = await awsService.getMonthlyCostTrend(start as string, end as string);
+    res.json(data);
 });
 
 export default router;

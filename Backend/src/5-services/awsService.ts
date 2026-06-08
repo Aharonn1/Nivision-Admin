@@ -126,23 +126,35 @@ class AwsService {
     };
     }
 
-    public async getMonthlyCostTrend() {
-    const today = new Date().toISOString().split('T')[0];
-    const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  public async getMonthlyCostTrend(startDate?: string, endDate?: string) {
+    // הגדרת ברירת מחדל: מתחילת החודש הנוכחי עד היום
+    const now = new Date();
+    const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const defaultEnd = now.toISOString().split('T')[0];
+
+    const start = startDate || defaultStart;
+    const end = endDate || defaultEnd;
 
     const command = new GetCostAndUsageCommand({
-        TimePeriod: { Start: firstDayOfMonth, End: today },
-        Granularity: "DAILY",
+        TimePeriod: { 
+            Start: start, 
+            End: end 
+        },
+        // הגדרנו MONTHLY כדי לקבל סיכום חודשי גלובלי, 
+        // או DAILY אם אתה רוצה לראות את התנודתיות היומית
+        Granularity: "MONTHLY", 
         Metrics: ["UnblendedCost"],
         GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }]
     });
 
     try {
         const response = await costExplorerClient.send(command);
-        return response.ResultsByTime;
+        
+        // וודא שהתשובה מכילה נתונים לפני ההחזרה
+        return response.ResultsByTime || [];
     } catch (error) {
-        console.error("Error fetching AWS cost data:", error);
-        throw error;
+        console.error("❌ Error fetching AWS cost data:", error);
+        throw new Error("Failed to fetch AWS billing data");
     }
 }
     

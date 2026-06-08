@@ -25,4 +25,15 @@ router.get('/system/intelligence', async (req, res, next) => {
     }
 });
 
+// הוסף את זה בתוך ה-router
+router.get('/aws', async (req, res, next) => {
+    try {
+        // הנחה: יש לך מתודה ב-systemService שמביאה את כל המדדים
+        const awsData = await systemService.getAwsResources(); 
+        res.json(awsData);
+    } catch (err) {
+        next(err);
+    }
+});
+
 export default router;

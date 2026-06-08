@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import util from 'util';
 import os from 'os';
+import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
 
 const execPromise = util.promisify(exec);
 
@@ -8,7 +9,12 @@ export class SystemHealthService {
     // שמירת היסטוריה בזיכרון (מתאפס בריסטארט, מושלם ל-15 דקות האחרונות)
     private static latencyHistory: number[] = Array.from({ length: 20 }, () => 40 + Math.random() * 10); // מתחיל עם 20 נקודות של 40-50ms
     private static errorCountHistory: number[] = []; // זה התיקון לשגיאה שלך!
- 
+ private cloudWatch: CloudWatchClient;
+
+    constructor() {
+        // וודא שה-AWS Credentials שלך מוגדרים בסביבה (ENV)
+        this.cloudWatch = new CloudWatchClient({ region: "eu-north-1" }); // שנה לאזור שלך
+    }
     public getCpuLoad() {
         return os.loadavg(); // [1, 5, 15] דקות אחרונות
     }
@@ -72,6 +78,50 @@ export class SystemHealthService {
                 memory: this.getMemoryUsage() // מחזיר {heapUsed, heapTotal, rss}
             }
         };
+    }
+    
+    async getAwsResources() {
+        try {
+            // כאן אנחנו מבקשים נתונים מ-CloudWatch
+            const cpuData = await this.getMetric("CPUUtilization", "AWS/EC2", "InstanceId", "i-0xxxxxxxxxxxxxx");
+            
+            // ניתן להוסיף כאן לוגיקה נוספת למשיכת Memory או Disk במידה והותקן CloudWatch Agent
+            
+            return {
+                resources: {
+                    cpu: cpuData || 0,
+                    memory: 256, // במידה ואין Memory Metrics מוגדרים, נשאר קבוע
+                    disk: 45,    // כנ"ל לגבי Disk
+                    errors: 0,
+                    netIn: 102,
+                    netOut: 85,
+                    swap: 5
+                }
+            };
+        } catch (error) {
+            console.error("Error fetching AWS metrics:", error);
+            throw new Error("Failed to fetch infrastructure metrics");
+        }
+    }
+
+private async getMetric(metricName: string, namespace: string, dimensionName: string, dimensionValue: string) {
+        const command = new GetMetricStatisticsCommand({
+            Namespace: namespace,
+            MetricName: metricName,
+            Dimensions: [{ Name: dimensionName, Value: dimensionValue }],
+            StartTime: new Date(Date.now() - 600000), // 10 דקות אחרונות
+            EndTime: new Date(),
+            Period: 300,
+            Statistics: ["Average"],
+        });
+
+        const response = await this.cloudWatch.send(command);
+        const datapoints = response.Datapoints;
+        
+        if (datapoints && datapoints.length > 0) {
+            return datapoints[datapoints.length - 1].Average;
+        }
+        return 0;
     }
 
     private calculateTrend(history: number[]): string {

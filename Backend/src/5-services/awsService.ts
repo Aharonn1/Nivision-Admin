@@ -1,6 +1,9 @@
 import { CloudWatchClient, GetMetricStatisticsCommand, Statistic } from "@aws-sdk/client-cloudwatch";
+import { CostExplorerClient, GetCostAndUsageCommand } from "@aws-sdk/client-cost-explorer";
 import { EC2Client, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 import dotenv from "dotenv";
+
+const costExplorerClient = new CostExplorerClient({ region: "us-east-1" });
 
 dotenv.config();
 
@@ -122,6 +125,27 @@ class AwsService {
         }
     };
     }
+
+    public async getMonthlyCostTrend() {
+    const today = new Date().toISOString().split('T')[0];
+    const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+    const command = new GetCostAndUsageCommand({
+        TimePeriod: { Start: firstDayOfMonth, End: today },
+        Granularity: "DAILY",
+        Metrics: ["UnblendedCost"],
+        GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }]
+    });
+
+    try {
+        const response = await costExplorerClient.send(command);
+        return response.ResultsByTime;
+    } catch (error) {
+        console.error("Error fetching AWS cost data:", error);
+        throw error;
+    }
+}
+    
 }
 
 export const awsService = new AwsService();

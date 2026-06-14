@@ -57,12 +57,12 @@ export default function AdminTeamPerformanceReport() {
         queryFn: () => dataService.getRawLeadsData(),
         staleTime: 1000 * 60 * 5,
     });
-
+    console.log(rawLeads)
     const { data: aiInsights } = useQuery({
         queryKey: ["agentInsights"],
         queryFn: () => (dataService as any).getAgentInsights(),
     });
-
+    console.log(aiInsights)
     const teamData = useMemo<TeamPerformance[]>(() => {
         if (!rawLeads) return [];
 

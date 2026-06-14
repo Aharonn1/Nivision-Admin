@@ -50,6 +50,7 @@ import { SecurityThreats } from "./Project1/SecurityThreats";
 import UseAwsMetrics from "./Project1/UseAwsMetrics";
 import { SystemReliabilityCenter } from "./Project1/SystemReliabilityCenter";
 import { InfrastructureIntelligence } from "./Project1/InfrastructureIntelligence";
+import BillingTrendChart from "./Project1/BillingTrendChart";
 
 // 1. הגדרת היסטוריה מבוססת Browser (ללא #)
 const browserHistory = createBrowserHistory();
@@ -173,6 +174,7 @@ const useAwsMetrics = createRoute({ getParentRoute: () => adminLayoutRoute, path
 const securityThreats = createRoute({ getParentRoute: () => adminLayoutRoute, path: "SecurityThreats", component: SecurityThreats });
 const systemReliabilityCenter = createRoute({ getParentRoute: () => adminLayoutRoute, path: "SystemReliabilityCenter", component: SystemReliabilityCenter });
 const infrastructureIntelligence = createRoute({ getParentRoute: () => adminLayoutRoute, path: "InfrastructureIntelligence", component: InfrastructureIntelligence });
+const billingTrendChart = createRoute({ getParentRoute: () => adminLayoutRoute, path: "BillingTrendChart", component: BillingTrendChart });
 
 
 // 7. בניית עץ הניתוב המלא
@@ -219,7 +221,8 @@ const routeTree = rootRoute.addChildren([
         securityThreats,
         useAwsMetrics,
         systemReliabilityCenter,
-        infrastructureIntelligence
+        infrastructureIntelligence,
+        billingTrendChart,
     ]),
 ]);
 

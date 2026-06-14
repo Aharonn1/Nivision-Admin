@@ -15,6 +15,19 @@ import appConfig from "../Utils/AppConfig";
 import axios from "axios";
 import dataService from "../Service/DataService";
 
+const SectionTitle = ({ title }: { title: string }) => (
+  <div style={{ 
+    fontSize: '10px', textTransform: 'uppercase', color: '#64748b', 
+    padding: '12px 16px 4px 16px', fontWeight: '800', letterSpacing: '0.05em',
+    marginTop: '4px' 
+  }}>
+    {title}
+  </div>
+);
+
+// רכיב עזר לקו מפריד
+const Divider = () => <div style={{ height: '1px', background: '#e2e8f0', margin: '6px 16px' }} />;
+
 const NavGroup = ({ title, icon: Icon, children, isSidebar = false }: { title: string, icon: any, children: React.ReactNode, isSidebar?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -129,6 +142,8 @@ export const NavBarAdmin = () => {
     return Array.isArray(allowedPermissions) && allowedPermissions.includes(groupId);
   };
 
+
+  
   return (
     <nav className="no-print" style={{ backgroundColor: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(15px)", borderBottom: "1px solid rgba(226, 232, 240, 0.5)", position: "sticky", top: 0, zIndex: 4000, width: "100%", minHeight: "64px" }}>
       <style>{`
@@ -194,25 +209,29 @@ export const NavBarAdmin = () => {
           )}
         </div>
         <div className="nav-left-side">
-          {isSuperAdmin && (
+                {isSuperAdmin && (
             <NavGroup title="הגדרות" icon={UserCog} isSidebar={true}>
-              <Link className="dropdown-link" to={"/admin/AdminProfileSettings" as any}>שינוי פרטי גישה</Link>
+              <SectionTitle title="ניהול גישה" />
+              <Link className="dropdown-link" to={"/admin/AdminProfileSettings" as any}>עדכון פרטי גישה</Link>
               <Link className="dropdown-link" to={"/admin/Register" as any}>ניהול מורשי גישה</Link>
               <Link className="dropdown-link" to={"/admin/RolePermissions" as any}>בקרת הרשאות דינמית</Link>
+              <Link className="dropdown-link" to={"/admin/UserAccessDashboard" as any}>דוח כניסות משתמשים</Link>
+              <Divider />
+              
+              <SectionTitle title="תשתיות AWS" />
+              <Link className="dropdown-link" to={"/admin/SystemReliabilityCenter" as any}>ניהול תשתיות AWS</Link>
+              <Link className="dropdown-link" to={"/admin/InfrastructureControlCenter" as any}>ניהול וניטור Node-Core</Link>
+              <Link className="dropdown-link" to={"/admin/BillingTrendChart" as any}>דוח עלויות ענן</Link>
+              <Divider />
+              
+              <SectionTitle title="ניטור וביצועים" />
               <Link className="dropdown-link" to={"/admin/SystemHealth" as any}>מרכז בקרה ותשתיות</Link>
               <Link className="dropdown-link" to={"/admin/SystemPerformanceTask" as any}>ניהול ביצועי מערכת</Link>
-              <Link className="dropdown-link" to={"/admin/AWSUsageDashboard" as any}>ניטור עלויות AWS</Link>
-              <Link className="dropdown-link" to={"/admin/UserAccessDashboard" as any}>כניסות משתמשים</Link>
               <Link className="dropdown-link" to={"/admin/SystemIntelligenceDash" as any}>ניטור בינה תפעולית</Link>
-              <Link className="dropdown-link" to={"/admin/SecurityFortressDash" as any}>אבטחה תפעולית (SOC)</Link>
               <Link className="dropdown-link" to={"/admin/InfrastructureHealthDash" as any}>ניטור משאבי ענן</Link>
+              <Link className="dropdown-link" to={"/admin/infrastructureIntelligence" as any}>ביצועי ענן בזמן אמת</Link>
               <Link className="dropdown-link" to={"/admin/CrmOperationalDash" as any}>ניטור תפעול CRM</Link>
-              <Link className="dropdown-link" to={"/admin/ServiceNodesDash" as any}>ניטור קונטיינרים</Link>
-              <Link className="dropdown-link" to={"/admin/InfrastructureControlCenter" as any}>ניהול וניטור Node-Core</Link>
-              <Link className="dropdown-link" to={"/admin/SystemReliabilityCenter" as any}>ניהול תשתיות ענן (AWS)</Link>
-              <Link className="dropdown-link" to={"/admin/infrastructureIntelligence" as any}>infrastructureIntelligence</Link>
-
-              {/* <Link className="dropdown-link" to={"/admin/SecurityThreats" as any}>SecurityThreats</Link> */}
+              <Link className="dropdown-link" to={"/admin/SecurityFortressDash" as any}>אבטחה תפעולית (SOC)</Link>
             </NavGroup>
           )}
         </div>
